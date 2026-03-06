@@ -3,6 +3,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from typing import List, Dict, Any
 import pandas as pd
+import os
 from decision_engine import run_decision_engine, analyze_sentiment, get_stock_data, AnalysisResponse, RateLimitException
 
 app = FastAPI(title="Vietnam Quant Engine")
