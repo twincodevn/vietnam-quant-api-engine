@@ -159,32 +159,45 @@ def process_signals(df: pd.DataFrame) -> List[SignalResult]:
     else:
         df['ml_probability'] = 0.5
 
-    # Detect simple trend changes or oversold bounce instead of strict macro bottom + divergence
+    # Calculate RSI Divergence (Simplified 20-day lookback)
+    df['RSI_Low_20'] = df['RSI'].rolling(window=20).min()
+    df['Price_Low_20'] = df['low'].rolling(window=20).min()
+    
     for i in range(len(df)):
         if pd.isna(df['RSI'].iloc[i]):
             continue
             
-        # Simplified Entry: 
-        # 1. We are near a macro bottom (within last 10 days) OR RSI just crossed up from 30 (Oversold)
-        # 2. MACD is crossing over below 0 OR MACD is extremely bullish (historically positive slope)
-        # 3. Good volume (above 1.0x 20SMA instead of 1.5x)
+        # V3 EXACTING STANDARDS: "Đánh Đâu Thắng Đó"
+        # 1. MACD crossover must happen strictly below 0
+        is_macd_golden_cross = df['MACD_crossover'].iloc[i] and df['MACD_line'].iloc[i] < 0
         
-        is_bottom_recently = any(df['is_macro_bottom'].iloc[max(0, i-10):i+1])
-        rsi_bullish = df['RSI'].iloc[i] > df['RSI'].iloc[i-1] and df['RSI'].iloc[i-1] < 45
+        # 2. Volume Spike: Must be a massive accumulation day (> 2.5x median/SMA volume)
+        df.loc[df.index[i], 'Volume_Spike_Strict'] = df['volume'].iloc[i] > 2.5 * df['Volume_SMA_20'].iloc[i]
         
-        df.loc[df.index[i], 'Volume_Spike_Soft'] = df['volume'].iloc[i] > 1.2 * df['Volume_SMA_20'].iloc[i]
+        # 3. RSI Bullish Divergence (Price made a lower low in last 20 days, but RSI made a higher low, and now crossing up)
+        # We simplify: Current RSI > 10 days ago, but Current Price < 10 days ago (momentum shifting while price dropped)
+        if i >= 10:
+            rsi_momentum_positive = df['RSI'].iloc[i] > df['RSI'].iloc[i-10]
+            price_divergence = df['close'].iloc[i] < df['close'].iloc[i-10]
+            is_bullish_divergence = (rsi_momentum_positive and price_divergence) and df['RSI'].iloc[i] < 45
+        else:
+            is_bullish_divergence = False
+            
+        is_macro_bottom = any(df['is_macro_bottom'].iloc[max(0, i-5):i+1])
         
-        if (is_bottom_recently or rsi_bullish):
-            if df['MACD_crossover'].iloc[i] or (df['MACD_line'].iloc[i] > df['MACD_signal'].iloc[i]):
-                if df['Volume_Spike_Soft'].iloc[i]:
-                    ml_prob = df['ml_probability'].iloc[i] if 'ml_probability' in df else 0.5
-                    signals.append(SignalResult(
-                        date=df.index[i].strftime('%Y-%m-%d'),
-                        price=df['close'].iloc[i],
-                        signal_type="STRONG_BUY",
-                        reason="Technical setup: RSI momentum w/ MACD strength & Volume.",
-                        ml_probability=round(float(ml_prob), 2)
-                    ))
+        # Confluence Engine
+        if is_macd_golden_cross and (is_bullish_divergence or is_macro_bottom) and df['Volume_Spike_Strict'].iloc[i]:
+            ml_prob = df['ml_probability'].iloc[i] if 'ml_probability' in df else 0.5
+            
+            # 4. The Final ML Filter: Must have > 65% win probability computed by Random Forest Phase
+            if ml_prob >= 0.65:
+                signals.append(SignalResult(
+                    date=df.index[i].strftime('%Y-%m-%d'),
+                    price=df['close'].iloc[i],
+                    signal_type="STRONG_BUY",
+                    reason="V3 Strict Mode: MACD < 0 Cross + Volume > 2.5x + RSI Divergence + ML > 65%",
+                    ml_probability=round(float(ml_prob), 2)
+                ))
 
     # Keep only the first signal in a 20-day cluster to avoid duplicate nested trades
     filtered_signals = []
