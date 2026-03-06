@@ -1,6 +1,7 @@
 "use client"
 
 import { cn } from "@/lib/utils"
+import { motion } from "framer-motion"
 
 interface SidebarProps {
     symbols: string[]
@@ -20,8 +21,13 @@ export function Sidebar({ symbols, activeSymbol, onSelectSymbol, isLoading }: Si
                     <div className="p-4 text-sm text-slate-500">Đang tải mã cổ phiếu...</div>
                 ) : (
                     <ul className="space-y-1 px-2">
-                        {symbols.map((sym) => (
-                            <li key={sym}>
+                        {symbols.map((sym, index) => (
+                            <motion.li
+                                initial={{ opacity: 0, x: -20 }}
+                                animate={{ opacity: 1, x: 0 }}
+                                transition={{ delay: index * 0.03, duration: 0.3 }}
+                                key={sym}
+                            >
                                 <button
                                     onClick={() => onSelectSymbol(sym)}
                                     className={cn(
@@ -34,7 +40,7 @@ export function Sidebar({ symbols, activeSymbol, onSelectSymbol, isLoading }: Si
                                     <span>{sym}</span>
                                     {activeSymbol === sym && <span className="w-1.5 h-1.5 rounded-full bg-indigo-400 shadow-[0_0_8px_rgba(129,140,248,0.8)]"></span>}
                                 </button>
-                            </li>
+                            </motion.li>
                         ))}
                     </ul>
                 )}
