@@ -10,4 +10,11 @@ services:
       - key: GEMINI_API_KEY
         sync: false
       - key: REDIS_URL
-        sync: false
+        fromDatabase:
+          name: vietnam-quant-redis
+          property: connectionString
+
+databases:
+  - name: vietnam-quant-redis
+    plan: free
+    ipAllowList: []
