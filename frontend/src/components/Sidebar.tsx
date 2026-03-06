@@ -17,6 +17,12 @@ export function Sidebar({ symbols, activeSymbol, onSelectSymbol, isLoading }: Si
                 <h2 className="font-bold text-sm tracking-widest text-slate-400 uppercase">CỔ PHIẾU VN30</h2>
             </div>
             <div className="flex-1 py-2">
+                <div className="px-4 mb-4 mt-2">
+                    <a href="/xray" className="w-full flex items-center justify-center gap-2 bg-gradient-to-r from-rose-600 to-orange-500 hover:from-rose-500 hover:to-orange-400 text-white font-bold py-3 px-4 rounded-xl shadow-[0_0_15px_rgba(225,29,72,0.4)] transition-all group">
+                        <span className="text-xl">🔮</span>
+                        <span>Bói Danh Mục</span>
+                    </a>
+                </div>
                 {isLoading ? (
                     <div className="p-4 text-sm text-slate-500">Đang tải mã cổ phiếu...</div>
                 ) : (

@@ -92,6 +92,49 @@ async def get_sentiment(symbol: str):
     res = analyze_sentiment(symbol)
     return SentimentResponse(score=res["score"], summary=res["summary"])
 
+class PortfolioRequest(BaseModel):
+    tickers: List[str]
+
+@app.post("/api/portfolio/xray")
+async def analyze_portfolio(req: PortfolioRequest):
+    if not req.tickers:
+        raise HTTPException(status_code=400, detail="Must provide at least one ticker")
+    
+    tickers_str = ", ".join(req.tickers[:10])
+    api_key = os.getenv("GEMINI_API_KEY")
+    if not api_key:
+        return {"title": "Error", "roast": "API Key missing.", "risk_score": 100}
+
+    from google import genai
+    client = genai.Client(api_key=api_key)
+    
+    prompt = f"""You are a harsh, sarcastic, but hyper-intelligent Quantitative Hedge Fund Manager from Wall Street. 
+    A retail investor just showed you their stock portfolio in the Vietnam stock market (HOSE).
+    The portfolio contains: {tickers_str}.
+    
+    Your task is to "roast" (chê bai hài hước, mỉa mai đau điếng) or brutally praise this portfolio. 
+    Review the diversification, the quality of the companies, and the risk.
+    Also, assign a Risk Score from 0 to 100, and a catchy Title for this specific investor personality type.
+    
+    Rules:
+    - Language: Vietnamese (use local slang like: đu đỉnh, lái lợn, múa bên trăng, gồng lỗ).
+    - Tone: Brutally honest, very funny, slightly condescending but insightful.
+    - JSON Format ONLY: {{ "title": "Danh Hiệu", "roast": "Nội dung...", "risk_score": 85 }}
+    """
+    
+    try:
+        response = client.models.generate_content(
+            model='gemini-2.5-flash',
+            contents=prompt,
+        )
+        import json, re
+        match = re.search(r'\{.*\}', response.text, re.DOTALL)
+        if match:
+            return json.loads(match.group(0))
+        return {"title": "Error", "roast": "Could not parse AI response.", "risk_score": 50}
+    except Exception as e:
+        return {"title": "Error", "roast": str(e), "risk_score": 50}
+
 if __name__ == "__main__":
     import uvicorn
     import os
